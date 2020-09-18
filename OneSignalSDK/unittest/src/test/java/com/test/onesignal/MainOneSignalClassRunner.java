@@ -55,10 +55,8 @@ import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
-import com.onesignal.OSNotificationGenerationJob;
-import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
-import com.onesignal.OSNotificationOpenResult;
-import com.onesignal.OSNotificationPayload;
+import com.onesignal.OSNotificationOpenedResult;
+import com.onesignal.OSNotificationReceivedEvent;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSPermissionSubscriptionState;
@@ -135,6 +133,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_isInForeground;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_handleNotificationOpen;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
@@ -213,13 +212,13 @@ public class MainOneSignalClassRunner {
    }
 
    private static String lastNotificationOpenedBody;
-   private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
-      return new OneSignal.NotificationOpenedHandler() {
+   private static OneSignal.OSNotificationOpenedHandler getNotificationOpenedHandler() {
+      return new OneSignal.OSNotificationOpenedHandler() {
          @Override
-         public void notificationOpened(OSNotificationOpenResult openedResult) {
+         public void notificationOpened(OSNotificationOpenedResult openedResult) {
 
             // TODO: Double check if we should use this or not
-            lastNotificationOpenedBody = openedResult.getNotification().getPayload().getBody();
+            lastNotificationOpenedBody = openedResult.getNotification().getBody();
          }
       };
    }
@@ -621,7 +620,7 @@ public class MainOneSignalClassRunner {
       time.advanceSystemTimeBy(31);
 
       // Click notification
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, "notification_id");
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, "notification_id");
       threadAndTaskWait();
 
       // Foreground app
@@ -665,7 +664,7 @@ public class MainOneSignalClassRunner {
       time.advanceSystemTimeBy(31);
 
       // Click notification
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
       threadAndTaskWait();
 
       // Foreground app
@@ -1006,7 +1005,7 @@ public class MainOneSignalClassRunner {
    @Config(shadows = {ShadowOneSignal.class})
    public void testOpenFromNotificationWhenAppIsDead() throws Exception {
       OneSignal.initWithContext(blankActivity);
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.initWithContext(blankActivity);
@@ -1070,7 +1069,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       OneSignal.removeNotificationOpenedHandler();
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(lastNotificationOpenedBody);
 
       OneSignalInit();
@@ -1086,7 +1085,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       Bundle bundle = getBaseNotifBundle();
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
 
       threadAndTaskWait();
 
@@ -1116,7 +1115,7 @@ public class MainOneSignalClassRunner {
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       // Will get appId saved
       OneSignal.initWithContext(blankActivity);
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
@@ -1135,7 +1134,7 @@ public class MainOneSignalClassRunner {
       shadowOf(blankActivity).getNextStartedActivity();
 
       // No OneSignal init here to test case where it is located in an Activity.
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       Intent intent = shadowOf(blankActivity).getNextStartedActivity();
       assertEquals("android.intent.action.VIEW", intent.getAction());
       assertEquals("http://google.com", intent.getData().toString());
@@ -1152,7 +1151,7 @@ public class MainOneSignalClassRunner {
 
       // No OneSignal init here to test case where it is located in an Activity.
 
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
@@ -1168,7 +1167,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       assertNull(lastNotificationOpenedBody);
 
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
       assertEquals("Test Msg", lastNotificationOpenedBody);
@@ -1176,17 +1175,16 @@ public class MainOneSignalClassRunner {
 
    private static String notificationReceivedBody;
    private static int androidNotificationId;
+
    @Test
+   @Config (shadows = { ShadowGenerateNotification.class })
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(AppNotificationGenerationJob notificationJob) {
-            androidNotificationId = notificationJob.getAndroidNotificationId();
-            notificationReceivedBody = notificationJob.getBody();
-         }
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         androidNotificationId = notificationReceivedEvent.getNotification().getAndroidNotificationId();
+         notificationReceivedBody = notificationReceivedEvent.getNotification().getBody();
       });
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
 
@@ -3846,9 +3844,9 @@ public class MainOneSignalClassRunner {
 
       // Create 2 notifications
       Bundle bundle = getBaseNotifBundle();
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
       bundle = getBaseNotifBundle("UUID2");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
       threadAndTaskWait();
 
       // Test canceling
@@ -3892,15 +3890,15 @@ public class MainOneSignalClassRunner {
    @Test
    public void testOSNotificationOpenResultToJSONObject() throws Exception {
       OSNotificationAction action = new OSNotificationAction(OSNotificationAction.ActionType.Opened, null);
-      OSNotificationOpenResult osNotificationOpenResult = new OSNotificationOpenResult(createTestOSNotification(), action);
+      OSNotificationOpenedResult osNotificationOpenedResult = new OSNotificationOpenedResult(createTestOSNotification(), action);
 
-      JSONObject testJsonObj = osNotificationOpenResult.toJSONObject();
+      JSONObject testJsonObj = osNotificationOpenedResult.toJSONObject();
 
       JSONObject additionalData = testJsonObj.optJSONObject("notification").optJSONObject("payload").optJSONObject("additionalData");
       assertEquals("bar", additionalData.optString("foo"));
 
       JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
-      assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
+      assertEquals("collapseId1", firstGroupedNotification.optJSONObject("payload").optString("collapseId"));
    }
 
    @Test
@@ -4263,7 +4261,7 @@ public class MainOneSignalClassRunner {
       openPayload.put("title", "Test title");
       openPayload.put("alert", "Test Msg");
       openPayload.put("custom", new JSONObject("{ \"i\": \"UUID\" }"));
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray().put(openPayload), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray().put(openPayload), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertEquals("os_notification_opened", ShadowFirebaseAnalytics.lastEventString);
       Bundle expectedBundle = new Bundle();
@@ -4305,11 +4303,8 @@ public class MainOneSignalClassRunner {
       // Assert that another receive isn't trigger later when the unprocessed receives are fired
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
 
-         }
       });
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       threadAndTaskWait();
@@ -4838,28 +4833,24 @@ public class MainOneSignalClassRunner {
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {
-
-      OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton("id", "text", null);
-      List<OSNotificationPayload.ActionButton> actionButtons = new ArrayList<>();
+      OSNotification.ActionButton actionButton = new OSNotification.ActionButton("id", "text", null);
+      List<OSNotification.ActionButton> actionButtons = new ArrayList<>();
       actionButtons.add(actionButton);
 
-      OSNotificationPayload payload = new OSNotificationPayload.OSNotificationPayloadBuilder()
-              .setBody("msg_body")
-              .setAdditionalData(new JSONObject("{\"foo\": \"bar\"}"))
-              .setActionButtons(actionButtons)
-              .build();
+      List<OSNotification> groupedNotifications = new ArrayList<>();
 
-      OneSignal.OSNotificationDisplay displayOption = OneSignal.OSNotificationDisplay.SILENT;
-
-      List<OSNotificationPayload> groupedNotifications = new ArrayList<>();
-
-      OSNotificationPayload groupedPayload = new OSNotificationPayload.OSNotificationPayloadBuilder()
+      OSNotification groupedNotification = new OneSignalPackagePrivateHelper.OSTestNotification.OSTestNotificationBuilder()
               .setCollapseId("collapseId1")
               .build();
 
-      groupedNotifications.add(groupedPayload);
+      groupedNotifications.add(groupedNotification);
 
-      return new OSNotification(groupedNotifications, payload, displayOption);
+      return new OneSignalPackagePrivateHelper.OSTestNotification.OSTestNotificationBuilder()
+              .setBody("msg_body")
+              .setAdditionalData(new JSONObject("{\"foo\": \"bar\"}"))
+              .setActionButtons(actionButtons)
+              .setGroupedNotifications(groupedNotifications)
+              .build();
    }
 
    private void OneSignalInit() {
